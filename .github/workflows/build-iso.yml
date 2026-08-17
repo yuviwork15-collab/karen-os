@@ -9,18 +9,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
-      - name: Build Karen OS ISO (archlinux container)
+      - name: Build Karen OS ISO (Arch Linux via podman)
         run: |
-          docker run --rm \
-            --user root \
-            -v "$PWD":/build:rw \
+          podman run --rm \
+            -v "$PWD":/build:rw,Z \
             -w /build/os \
-            archlinux:latest \
+            docker.io/archlinux:latest \
             bash -c "
               set -e
-              pacman -Syu --noconfirm --needed archiso >/dev/null
+              pacman-key --init
+              pacman-key --populate archlinux
+              pacman -Syy --noconfirm --needed archiso
               mkdir -p profiles/karenos/airootfs/opt/karen-linux
               cp -f desktop/karen_shell.py profiles/karenos/airootfs/opt/karen-linux/
               cp -f desktop/requirements-linux.txt profiles/karenos/airootfs/opt/karen-linux/
