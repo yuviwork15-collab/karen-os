@@ -7,7 +7,7 @@
     "launch_minimized": false,
     "check_updates_on_startup": true,
     "default_ai_provider": "OpenRouter",
-    "auto_provider_switch": true,
+    "auto_provider_switch": false,
     "attention_message_prompts": true,
     "attention_call_prompts": true,
     "developer_mode_enabled": false,
