@@ -7,31 +7,38 @@ on:
 jobs:
   build-iso:
     runs-on: ubuntu-latest
+    container:
+      image: archlinux/archlinux:latest
+      options: --privileged
     steps:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Build Karen OS ISO (Arch Linux via podman)
+      - name: Update system + install archiso
         run: |
-          podman run --rm \
-            -v "$PWD":/build:rw,Z \
-            -w /build/os \
-            docker.io/archlinux:latest \
-            bash -c "
-              set -e
-              pacman-key --init
-              pacman-key --populate archlinux
-              pacman -Syy --noconfirm --needed archiso
-              mkdir -p profiles/karenos/airootfs/opt/karen-linux
-              cp -f desktop/karen_shell.py profiles/karenos/airootfs/opt/karen-linux/
-              cp -f desktop/requirements-linux.txt profiles/karenos/airootfs/opt/karen-linux/
-              rm -f profiles/karenos/airootfs/opt/karen-linux/.ready
-              mkarchiso -v -w work -o out profiles/karenos
-            "
+          pacman-key --init
+          pacman-key --populate archlinux
+          pacman -Syu --noconfirm --needed
+          pacman -S --noconfirm --needed archiso
+
+      - name: Ship Karen payload into profile
+        run: |
+          mkdir -p profiles/karenos/airootfs/opt/karen-linux
+          cp -f desktop/karen_shell.py profiles/karenos/airootfs/opt/karen-linux/
+          cp -f desktop/requirements-linux.txt profiles/karenos/airootfs/opt/karen-linux/
+          rm -f profiles/karenos/airootfs/opt/karen-linux/.ready
+
+      - name: Build ISO
+        run: mkarchiso -v -w /tmp/karen-work -o /tmp/karen-out profiles/karenos
+
+      - name: Copy ISO to workspace
+        run: |
+          mkdir -p os/out
+          cp /tmp/karen-out/*.iso os/out/
 
       - name: Upload ISO artifact
         uses: actions/upload-artifact@v4
         with:
           name: karenos-iso
-          path: os/out/karenos-*.iso
+          path: os/out/*.iso
           if-no-files-found: error
