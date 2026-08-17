@@ -1,0 +1,7 @@
+# Karen OS - systemd presets (applied automatically in the live image)
+enable NetworkManager.service
+enable cpufreq.service
+enable zram-generator.service
+disable bluetooth.service
+disable avahi-daemon.service
+disable systemd-journal-upload.service

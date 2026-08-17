@@ -1,0 +1,36 @@
+name: Build Karen OS ISO
+
+# Trigger: GitHub repo -> Actions tab -> "Run workflow"
+on:
+  workflow_dispatch:
+
+jobs:
+  build-iso:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Karen OS ISO (archlinux container)
+        run: |
+          docker run --rm \
+            --user root \
+            -v "$PWD":/build:rw \
+            -w /build/os \
+            archlinux:latest \
+            bash -c "
+              set -e
+              pacman -Syu --noconfirm --needed archiso >/dev/null
+              mkdir -p profiles/karenos/airootfs/opt/karen-linux
+              cp -f desktop/karen_shell.py profiles/karenos/airootfs/opt/karen-linux/
+              cp -f desktop/requirements-linux.txt profiles/karenos/airootfs/opt/karen-linux/
+              rm -f profiles/karenos/airootfs/opt/karen-linux/.ready
+              mkarchiso -v -w work -o out profiles/karenos
+            "
+
+      - name: Upload ISO artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: karenos-iso
+          path: os/out/karenos-*.iso
+          if-no-files-found: error

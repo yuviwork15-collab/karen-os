@@ -1,0 +1,3 @@
+# Karen OS - Openbox autostart (panel + Karen assistant)
+tint2 &
+/opt/karen-linux/karen-bootstrap.sh >/var/log/karen-boot.log 2>&1 &

@@ -1,0 +1,26 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Legacy / old-name backups (revert ke liye local Desktop folder hai: Karen-backup-before-theme)
+extra/
+
+# SECRETS + local data (inhe kabhi push nahi karna!)
+config/api_keys.json
+config/smart_home.key
+config/smart_home.sqlite3*
+config/workspace_store.sqlite3
+config/.desktop_shortcut_created
+config/brahma_connect/devices.json
+config/brahma_connect/*.key
+
+# OS build outputs (repo me nahi - Actions/VM pe regenerate hote hain)
+os/work/
+os/out/
+
+# Node / misc
+node_modules/
+.DS_Store
+Thumbs.db

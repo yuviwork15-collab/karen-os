@@ -1,0 +1,51 @@
+# ---------------------------------------------------------------------------
+# Karen OS package list - EVERYTHING lean for low-end hardware
+# No DE, no bloat. Xorg + Openbox + tint2 + Karen shell.
+# ---------------------------------------------------------------------------
+
+# --- base system ---
+base
+linux
+linux-firmware
+mkinitcpio
+arch-install-scripts
+bash-completion
+
+# --- network ---
+networkmanager
+curl
+wget
+
+# --- display server ---
+xorg-server
+xorg-xinit
+xorg-xrandr
+xorg-xdpyinfo
+xf86-video-vesa
+
+# --- window manager / desktop (lightweight) ---
+openbox
+tint2
+xterm
+pcmanfm
+
+# --- audio (lightweight pipewire) ---
+pipewire
+pipewire-pulse
+wireplumber
+alsa-utils
+portaudio
+
+# --- Karen shell runtime ---
+python
+python-pip
+pyqt6
+
+# --- low-end performance / power ---
+cpupower
+zram-generator
+
+# --- tools ---
+git
+sudo
+openssh

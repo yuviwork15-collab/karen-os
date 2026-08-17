@@ -1,0 +1,27 @@
+# Karen OS - tint2 panel (spider theme: red accent on navy)
+panel_items = clock
+panel_size = 100% 26
+panel_margin = 0 0 0 0
+panel_padding = 4 2 4 2
+panel_background_id = 1
+font_shadow = 0
+
+# panel background
+rounded = 0
+border_width = 0
+background_color = #0A0C18 90
+border_color = #E31C23 45
+
+# clock
+time1_format = %H:%M
+time1_font = DejaVu Sans 9
+time1_timezone =
+time2_format = %a %d %b
+time2_font = DejaVu Sans 8
+
+clock_fg_color = #FFFFFF 100
+clock_padding = 8 0 8 0
+clock_background_id = 0
+
+# tooltip
+tooltip_show = 0
