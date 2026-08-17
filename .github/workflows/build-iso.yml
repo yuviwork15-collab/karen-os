@@ -25,6 +25,7 @@ jobs:
         run: |
           mkdir -p os/profiles/karenos/airootfs/opt/karen-linux
           cp -f os/desktop/karen_shell.py os/profiles/karenos/airootfs/opt/karen-linux/
+          cp -f os/desktop/karen-welcome.py os/profiles/karenos/airootfs/opt/karen-linux/
           cp -f os/desktop/requirements-linux.txt os/profiles/karenos/airootfs/opt/karen-linux/
           rm -f os/profiles/karenos/airootfs/opt/karen-linux/.ready
 

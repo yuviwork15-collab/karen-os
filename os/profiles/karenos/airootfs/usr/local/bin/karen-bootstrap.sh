@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Karen OS - first boot bootstrap: network wait -> deps -> Karen shell
-# Runs from Openbox autostart on the live image.
+# Karen OS - first boot bootstrap: network wait -> deps -> wizard or Karen shell
+# Runs from Openbox autostart (live ISO and installed system).
 set -u
 log() { echo "[karen-bootstrap] $*"; }
 
 log "waiting for network..."
-for i in $(seq 1 30); do
+for i in $(seq 1 45); do
   ping -c1 -W2 archlinux.org >/dev/null 2>&1 && break
   sleep 2
 done
@@ -13,11 +13,16 @@ done
 if [ ! -f /opt/karen-linux/.ready ]; then
   log "installing Karen dependencies (first boot only)..."
   pacman -Syy --noconfirm --needed python-pip python-setuptools >/dev/null 2>&1
-  python -m pip install --break-system-packages -q -r /opt/karen-linux/requirements-linux.txt || log "pip failed"
+  python -m pip install --break-system-packages -q -r /opt/karen-linux/requirements-linux.txt || log "pip failed (no internet yet - wizard can retry)"
   touch /opt/karen-linux/.ready
   log "deps ready"
 fi
 
 cd /opt/karen-linux || exit 1
-log "launching Karen shell"
-nohup python karen_shell.py >>/var/log/karen-session.log 2>&1 &
+if [ ! -f /etc/karen/config.json ]; then
+  log "first launch - starting setup wizard"
+  nohup python karen-welcome.py >>/var/log/karen-welcome.log 2>&1 &
+else
+  log "launching Karen shell"
+  nohup python karen_shell.py >>/var/log/karen-session.log 2>&1 &
+fi

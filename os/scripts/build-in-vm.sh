@@ -35,6 +35,7 @@ fi
 echo "==> copying Karen shell payload..."
 mkdir -p "$PROFILE/airootfs/opt/karen-linux"
 cp -f "$OS_DIR/desktop/karen_shell.py"        "$PROFILE/airootfs/opt/karen-linux/"
+cp -f "$OS_DIR/desktop/karen-welcome.py"      "$PROFILE/airootfs/opt/karen-linux/"
 cp -f "$OS_DIR/desktop/requirements-linux.txt" "$PROFILE/airootfs/opt/karen-linux/"
 rm -f "$PROFILE/airootfs/opt/karen-linux/.ready"
 
