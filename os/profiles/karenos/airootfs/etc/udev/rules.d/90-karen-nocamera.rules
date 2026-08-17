@@ -1,0 +1,4 @@
+# Karen OS - block webcam/camera access completely (privacy)
+KERNEL=="video*", MODE="0000"
+KERNEL=="uvcvideo*", MODE="0000"
+KERNEL=="media*", MODE="0000"

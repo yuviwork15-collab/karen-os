@@ -1,3 +1,5 @@
 google-generativeai
 requests
 duckduckgo-search
+edge-tts
+vosk

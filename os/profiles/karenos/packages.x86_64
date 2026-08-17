@@ -41,6 +41,11 @@ portaudio
 python
 python-pip
 python-pyqt6
+python-pyaudio
+mpv
+
+# --- installer (portable USB full install) ---
+archinstall
 
 # --- low-end performance / power ---
 cpupower
