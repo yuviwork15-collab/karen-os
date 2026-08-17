@@ -657,19 +657,19 @@
     controls.enablePan = false;
 
     // ——— COLORS ———
-    const C_BRIGHT = 0xffaa30;
-    const C_MID    = 0xdd7700;
-    const C_DIM    = 0x884400;
-    const C_FAINT  = 0x442200;
-    const C_HOT    = 0xffcc66;
-    const C_CYAN   = 0x37ffea;
+const C_BRIGHT = 0xe31c23;
+const C_MID    = 0xb11313;
+const C_DIM    = 0x7c0d10;
+const C_FAINT  = 0x3a0508;
+const C_HOT    = 0xff5a60;
+    const C_CYAN   = 0x4f7dff;
 
     // ——— BACKGROUND ATMOSPHERE (STARS, FAINT GRID & DUST) ———
     const atmosphereGroup = new THREE.Group();
     scene.add(atmosphereGroup);
 
     // 1. Faint 3D Grid Floor & Ceiling
-    const gridHelper = new THREE.GridHelper(60, 40, 0xaa5500, 0x221100);
+    const gridHelper = new THREE.GridHelper(60, 40, 0x4465c9, 0x0d1330);
     gridHelper.position.y = -4.5;
     gridHelper.material.opacity = 0.08;
     gridHelper.material.transparent = true;
@@ -686,7 +686,7 @@
     }
     starGeo.setAttribute("position", new THREE.Float32BufferAttribute(starPos, 3));
     const starMat = new THREE.PointsMaterial({
-      color: 0xffddaa,
+      color: 0xffc2c6,
       size: 0.03,
       transparent: true,
       opacity: 0.35,
