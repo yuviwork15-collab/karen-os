@@ -40,7 +40,7 @@ portaudio
 # --- Karen shell runtime ---
 python
 python-pip
-pyqt6
+python-pyqt6
 
 # --- low-end performance / power ---
 cpupower

@@ -7,4 +7,9 @@ xset -dpms off
 xset s off
 xsetroot -solid "#0A0C18"
 
+# install Karen desktop configs (avoid package file conflicts in airootfs)
+mkdir -p /etc/xdg/tint2 /etc/xdg/openbox
+cp -f /opt/karen-linux/etc/tint2/tint2rc /etc/xdg/tint2/tint2rc
+cp -f /opt/karen-linux/etc/openbox/autostart /etc/xdg/openbox/autostart
+
 exec openbox-session
