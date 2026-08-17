@@ -23,13 +23,13 @@ jobs:
 
       - name: Ship Karen payload into profile
         run: |
-          mkdir -p profiles/karenos/airootfs/opt/karen-linux
-          cp -f desktop/karen_shell.py profiles/karenos/airootfs/opt/karen-linux/
-          cp -f desktop/requirements-linux.txt profiles/karenos/airootfs/opt/karen-linux/
-          rm -f profiles/karenos/airootfs/opt/karen-linux/.ready
+          mkdir -p os/profiles/karenos/airootfs/opt/karen-linux
+          cp -f os/desktop/karen_shell.py os/profiles/karenos/airootfs/opt/karen-linux/
+          cp -f os/desktop/requirements-linux.txt os/profiles/karenos/airootfs/opt/karen-linux/
+          rm -f os/profiles/karenos/airootfs/opt/karen-linux/.ready
 
       - name: Build ISO
-        run: mkarchiso -v -w /tmp/karen-work -o /tmp/karen-out profiles/karenos
+        run: mkarchiso -v -w /tmp/karen-work -o /tmp/karen-out os/profiles/karenos
 
       - name: Copy ISO to workspace
         run: |
