@@ -1,3 +1,3 @@
-# Karen OS - Openbox autostart (panel + Karen assistant)
-tint2 &
-/usr/local/bin/karen-bootstrap.sh >/var/log/karen-boot.log 2>&1 &
+# Karen OS - live ISO autostart: the installer, nothing else.
+# No desktop, no panel - boot -> installer -> target USB.
+/opt/karen-linux/karen-installer.py >/var/log/karen-installer.log 2>&1 &

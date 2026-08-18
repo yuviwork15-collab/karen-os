@@ -1,6 +1,7 @@
 # ---------------------------------------------------------------------------
-# Karen OS package list - EVERYTHING lean for low-end hardware
-# No DE, no bloat. Xorg + Openbox + tint2 + Karen shell.
+# Karen OS ISO package list - INSTALLER ONLY (no live desktop).
+# Boots straight into the macOS-style installer GUI. Target system gets the
+# full desktop via karen-setup.sh during install.
 # ---------------------------------------------------------------------------
 
 # --- base system ---
@@ -11,56 +12,31 @@ mkinitcpio
 arch-install-scripts
 bash-completion
 
-# --- network ---
+# --- network (installer + chroot setup need internet) ---
 networkmanager
 curl
 wget
 syslinux
 
-# --- display server ---
+# --- display (installer GUI) ---
 xorg-server
 xorg-xinit
 xorg-xrandr
 xorg-xdpyinfo
 xf86-video-vesa
-
-# --- window manager / desktop (lightweight) ---
 openbox
-tint2
 xterm
-pcmanfm
 
-# --- audio (lightweight pipewire) ---
-pipewire
-pipewire-pulse
-wireplumber
-alsa-utils
-portaudio
-
-# --- Karen shell runtime ---
+# --- installer runtime ---
 python
 python-pip
 python-pyqt6
-python-pyaudio
-mpv
-yt-dlp
+archinstall
+git
 
-# --- boot splash + looks ---
+# --- boot splash + installer background ---
 plymouth
 hsetroot
-scrot
-
-# --- browser ---
-firefox
-
-# --- installer (portable USB full install) ---
-archinstall
-
-# --- low-end performance / power ---
-cpupower
-zram-generator
 
 # --- tools ---
-git
 sudo
-openssh

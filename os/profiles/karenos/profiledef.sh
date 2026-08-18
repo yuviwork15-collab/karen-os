@@ -21,5 +21,6 @@ file_permissions=(
   ["/root"]="0:0:750"
   ["/opt/karen-linux/karen_shell.py"]="0:0:755"
   ["/opt/karen-linux/karen-welcome.py"]="0:0:755"
+  ["/opt/karen-linux/karen-installer.py"]="0:0:755"
   ["/usr/local/bin/karen-bootstrap.sh"]="0:0:755"
 )

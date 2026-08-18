@@ -43,14 +43,15 @@ say "  [OK] packages"
 # --- 2) Karen payload -----------------------------------------------------
 say "downloading Karen shell + welcome wizard..."
 mkdir -p /opt/karen-linux/etc/tint2 /opt/karen-linux/etc/openbox /opt/karen-linux/assets /opt/karen-linux/media /opt/karen-linux/screenshots
-for f in karen_shell.py karen-welcome.py requirements-linux.txt; do
+for f in karen_shell.py karen-welcome.py karen-dock.py requirements-linux.txt; do
   curl -fsSL "$REPO/desktop/$f" -o "/opt/karen-linux/$f"
 done
 curl -fsSL "$REPO/profiles/karenos/airootfs/opt/karen-linux/assets/wallpaper.png" -o /opt/karen-linux/assets/wallpaper.png
 curl -fsSL "$REPO/profiles/karenos/airootfs/opt/karen-linux/etc/openbox/menu.xml" -o /opt/karen-linux/etc/openbox/menu.xml
 python -m pip install --break-system-packages -q -r /opt/karen-linux/requirements-linux.txt >>"$LOG" 2>&1
 curl -fsSL "$REPO/profiles/karenos/airootfs/usr/local/bin/karen-bootstrap.sh" -o /opt/karen-linux/karen-bootstrap.sh
-chmod 755 /opt/karen-linux/karen_shell.py /opt/karen-linux/karen-welcome.py /opt/karen-linux/karen-bootstrap.sh
+chmod 755 /opt/karen-linux/karen_shell.py /opt/karen-linux/karen-welcome.py \
+  /opt/karen-linux/karen-dock.py /opt/karen-linux/karen-bootstrap.sh
 say "  [OK] Karen shell"
 
 # --- 3) system services ---------------------------------------------------
@@ -193,8 +194,9 @@ exec openbox-session
 EOF
 
 cat > /opt/karen-linux/etc/openbox/autostart <<'EOF'
-# Karen OS - Openbox autostart (panel + Karen assistant)
+# Karen OS - Openbox autostart (panel + dock + Karen assistant)
 tint2 &
+/opt/karen-linux/karen-dock.py >/var/log/karen-dock.log 2>&1 &
 /opt/karen-linux/karen-bootstrap.sh >/var/log/karen-boot.log 2>&1 &
 EOF
 
