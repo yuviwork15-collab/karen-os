@@ -35,17 +35,19 @@ pacman -S --noconfirm --needed \
   xorg-server xorg-xinit xorg-xrandr xorg-xdpyinfo xf86-video-vesa \
   openbox tint2 xterm pcmanfm \
   pipewire pipewire-pulse wireplumber alsa-utils portaudio \
-  python python-pip python-pyqt6 python-pyaudio mpv \
+  python python-pip python-pyqt6 python-pyaudio mpv yt-dlp plymouth hsetroot \
   networkmanager cpupower zram-generator git sudo openssh \
   >>"$LOG" 2>&1
 say "  [OK] packages"
 
 # --- 2) Karen payload -----------------------------------------------------
 say "downloading Karen shell + welcome wizard..."
-mkdir -p /opt/karen-linux/etc/tint2 /opt/karen-linux/etc/openbox
+mkdir -p /opt/karen-linux/etc/tint2 /opt/karen-linux/etc/openbox /opt/karen-linux/assets /opt/karen-linux/media
 for f in karen_shell.py karen-welcome.py requirements-linux.txt; do
   curl -fsSL "$REPO/desktop/$f" -o "/opt/karen-linux/$f"
 done
+curl -fsSL "$REPO/profiles/karenos/airootfs/opt/karen-linux/assets/wallpaper.png" -o /opt/karen-linux/assets/wallpaper.png
+curl -fsSL "$REPO/profiles/karenos/airootfs/opt/karen-linux/etc/openbox/menu.xml" -o /opt/karen-linux/etc/openbox/menu.xml
 python -m pip install --break-system-packages -q -r /opt/karen-linux/requirements-linux.txt >>"$LOG" 2>&1
 curl -fsSL "$REPO/profiles/karenos/airootfs/usr/local/bin/karen-bootstrap.sh" -o /opt/karen-linux/karen-bootstrap.sh
 chmod 755 /opt/karen-linux/karen_shell.py /opt/karen-linux/karen-welcome.py /opt/karen-linux/karen-bootstrap.sh
@@ -90,7 +92,65 @@ cat > /etc/systemd/system/getty@tty1.service.d/autologin.conf <<'EOF'
 ExecStart=
 ExecStart=-/usr/bin/agetty --autologin root --noclear %I $TERM
 EOF
-say "  [OK] zram + cpufreq + autologin"
+
+# --- boot splash (plymouth, spidey) + USB durability + speed tuning --------
+mkdir -p /usr/share/plymouth/themes/karen-spidey
+for f in karen-spidey.plymouth karen-spidey.script spider.png frame0.png frame1.png frame2.png \
+         frame3.png frame4.png frame5.png frame6.png frame7.png; do
+  curl -fsSL "$REPO/profiles/karenos/airootfs/usr/share/plymouth/themes/karen-spidey/$f" \
+    -o "/usr/share/plymouth/themes/karen-spidey/$f" 2>/dev/null || true
+done
+cat > /etc/plymouth/plymouthd.conf <<'EOF'
+[Daemon]
+Theme=karen-spidey
+ShowDelay=0
+DeviceTimeout=8
+EOF
+
+cat > /etc/mkinitcpio.conf <<'EOF'
+# Karen OS - initramfs with plymouth boot splash
+MODULES=()
+BINARIES=()
+FILES=()
+HOOKS=(base udev autodetect modconf kms keyboard keymap consolefont plymouth block filesystems)
+COMPRESSION="zstd"
+EOF
+mkinitcpio -P >>"$LOG" 2>&1 || true
+
+sed -i 's/^GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"/' /etc/default/grub
+grub-mkconfig -o /boot/grub/grub.cfg >>"$LOG" 2>&1 || true
+
+cat > /etc/systemd/journald.conf <<'EOF'
+# Karen OS - keep logs in RAM: portable USB write wear + speed
+[Journal]
+Storage=volatile
+Compress=yes
+SystemMaxUse=32M
+EOF
+
+echo 'tmpfs /var/log tmpfs defaults,noatime,nosuid,noexec,size=64M 0 0' >> /etc/fstab
+
+cat > /etc/sysctl.d/99-karen.conf <<'EOF'
+# Karen OS - snappier on 4GB RAM
+vm.swappiness=10
+vm.vfs_cache_pressure=50
+EOF
+
+cat > /etc/systemd/system-preset/90-karen.preset <<'EOF'
+# Karen OS - services we want
+enable NetworkManager.service
+enable cpufreq.service
+enable systemd-zram-setup@zram0.service
+enable plymouth-start.service
+enable plymouth-quit.service
+enable plymouth-quit-wait.service
+
+# bloat off
+disable bluetooth.service
+disable avahi-daemon.service
+disable systemd-journal-upload.service
+EOF
+say "  [OK] boot splash + durability + speed"
 
 # --- 4) shell environment -------------------------------------------------
 cat > /etc/profile.d/karen.sh <<'EOF'
@@ -114,10 +174,11 @@ export XDG_RUNTIME_DIR="/run/user/0"
 [ -d "$XDG_RUNTIME_DIR" ] || { mkdir -p "$XDG_RUNTIME_DIR"; chmod 700 "$XDG_RUNTIME_DIR"; }
 xset -dpms off
 xset s off
-xsetroot -solid "#0A0C18"
+[ -f /opt/karen-linux/assets/wallpaper.png ] && hsetroot -fill /opt/karen-linux/assets/wallpaper.png || xsetroot -solid "#0A0C18"
 mkdir -p /etc/xdg/tint2 /etc/xdg/openbox
 cp -f /opt/karen-linux/etc/tint2/tint2rc /etc/xdg/tint2/tint2rc
 cp -f /opt/karen-linux/etc/openbox/autostart /etc/xdg/openbox/autostart
+cp -f /opt/karen-linux/etc/openbox/menu.xml /etc/xdg/openbox/menu.xml
 exec openbox-session
 EOF
 

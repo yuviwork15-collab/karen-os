@@ -5,11 +5,12 @@ export XDG_RUNTIME_DIR="/run/user/0"
 # lighten the desktop for low-end hardware
 xset -dpms off
 xset s off
-xsetroot -solid "#0A0C18"
+[ -f /opt/karen-linux/assets/wallpaper.png ] && hsetroot -fill /opt/karen-linux/assets/wallpaper.png || xsetroot -solid "#0A0C18"
 
 # install Karen desktop configs (avoid package file conflicts in airootfs)
 mkdir -p /etc/xdg/tint2 /etc/xdg/openbox
 cp -f /opt/karen-linux/etc/tint2/tint2rc /etc/xdg/tint2/tint2rc
 cp -f /opt/karen-linux/etc/openbox/autostart /etc/xdg/openbox/autostart
+cp -f /opt/karen-linux/etc/openbox/menu.xml /etc/xdg/openbox/menu.xml
 
 exec openbox-session

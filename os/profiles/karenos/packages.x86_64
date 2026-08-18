@@ -43,6 +43,11 @@ python-pip
 python-pyqt6
 python-pyaudio
 mpv
+yt-dlp
+
+# --- boot splash + looks ---
+plymouth
+hsetroot
 
 # --- installer (portable USB full install) ---
 archinstall

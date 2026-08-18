@@ -10,6 +10,16 @@ for i in $(seq 1 45); do
   sleep 2
 done
 
+# --- self-update: pull the latest Karen (silent, only when online) ---
+if ping -c1 -W2 archlinux.org >/dev/null 2>&1; then
+  log "checking for Karen updates..."
+  for f in karen_shell.py karen-welcome.py; do
+    curl -fsSL --time-cond "/opt/karen-linux/$f" -o "/opt/karen-linux/$f" \
+      "https://raw.githubusercontent.com/yuviwork15-collab/karen-os/main/os/desktop/$f" 2>/dev/null && {
+        chmod 755 "/opt/karen-linux/$f"; log "updated $f"; } || true
+  done
+fi
+
 if [ ! -f /opt/karen-linux/.ready ]; then
   log "installing Karen dependencies (first boot only)..."
   pacman -Syy --noconfirm --needed python-pip python-setuptools >/dev/null 2>&1

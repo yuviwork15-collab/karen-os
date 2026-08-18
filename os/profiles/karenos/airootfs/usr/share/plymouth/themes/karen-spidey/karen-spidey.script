@@ -1,0 +1,30 @@
+# Karen OS - spidey boot splash (navy gradient, red spinner)
+# Based on the standard plymouth "spinfinity" script pattern.
+
+Window.SetBackgroundTopColor (0.039, 0.047, 0.094);   # 0x0A0C18
+Window.SetBackgroundBottomColor (0.075, 0.102, 0.200); # 0x131A33
+
+logo = Image ("spider.png");
+sprite_logo = Sprite (logo);
+sprite_logo.SetX (Window.GetWidth () / 2 - logo.GetWidth () / 2);
+sprite_logo.SetY (Window.GetHeight () / 2 - logo.GetHeight () / 2 - 60);
+
+frames = [
+  Image ("frame0.png"), Image ("frame1.png"), Image ("frame2.png"), Image ("frame3.png"),
+  Image ("frame4.png"), Image ("frame5.png"), Image ("frame6.png"), Image ("frame7.png")
+];
+spinner = Sprite (frames[0]);
+spinner.SetX (Window.GetWidth () / 2 - frames[0].GetWidth () / 2);
+spinner.SetY (Window.GetHeight () / 2 - frames[0].GetHeight () / 2 + 50);
+
+fun (i)
+{
+    spinner.SetImage (frames[i % 8]);
+    mysleep (0.08);
+}
+
+i = 0;
+while (true) {
+    fun (i);
+    i = i + 1;
+}

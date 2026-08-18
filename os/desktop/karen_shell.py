@@ -34,6 +34,7 @@ BG, PANEL, RED, RED_D, BLUE, WHITE, DIM = (
 CONFIG_PATHS = [Path("/etc/karen/config.json"), Path.home() / ".karen" / "config.json"]
 VOSK_URL = "https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip"
 VOSK_DIR = Path("/opt/karen-linux/models/vosk-small")
+MEDIA_DIR = Path("/opt/karen-linux/media")
 
 DEFAULT_PROVIDERS = [
     {"id": "zen", "name": "OpenCode Zen", "type": "openai",
@@ -213,6 +214,53 @@ class SoundFx:
                 ["aplay", "-q", str(f)], capture_output=True), daemon=True).start()
 
 
+class MediaPlayer:
+    """Speech-driven music/video: yt-dlp search+download (cached in MEDIA_DIR), mpv playback."""
+
+    def __init__(self):
+        self.proc = None
+        self._lock = threading.Lock()
+
+    def playing(self):
+        return self.proc is not None and self.proc.poll() is None
+
+    def stop(self):
+        with self._lock:
+            if self.proc and self.proc.poll() is None:
+                try:
+                    self.proc.terminate()
+                except Exception:
+                    pass
+            self.proc = None
+
+    def play(self, query, video=False):
+        self.stop()
+        threading.Thread(target=self._work, args=(query, video), daemon=True).start()
+
+    def _work(self, query, video):
+        try:
+            MEDIA_DIR.mkdir(parents=True, exist_ok=True)
+            fmt = "bestvideo*+bestaudio/best" if video else "bestaudio/best"
+            subprocess.run(["yt-dlp", "-f", fmt, "--no-playlist", "-o",
+                            str(MEDIA_DIR / "%(title).50s.%(ext)s"),
+                            f"ytsearch1:{query}"], capture_output=True, timeout=600)
+            files = sorted(MEDIA_DIR.glob("*"), key=lambda p: p.stat().st_mtime, reverse=True)
+            if not files:
+                return
+            f = files[0]
+            args = ["mpv", "--no-terminal", "--really-quiet", "--no-video", str(f)] if not video else \
+                   ["mpv", "--no-terminal", "--really-quiet", str(f)]
+            self.proc = subprocess.Popen(args)
+            self.proc.wait()
+        except Exception:
+            pass
+
+    def status(self):
+        if self.playing():
+            return "Music playing (say <b>stop</b> to stop)"
+        return ""
+
+
 class VoiceInput:
     """Offline speech recognition (vosk) with silence-based sentence detection."""
 
@@ -327,6 +375,7 @@ class KarenShell(QMainWindow):
         self._tts_ok = subprocess.run(["sh", "-c", "command -v mpv"], capture_output=True).returncode == 0
         self._mic = VoiceInput()
         self._sfx = SoundFx()
+        self._media = MediaPlayer()
 
         self.setWindowTitle("Karen OS")
         self.setGeometry(60, 60, 960, 660)
@@ -470,13 +519,33 @@ class KarenShell(QMainWindow):
         self._busy = True
         threading.Thread(target=self._answer, args=(text,), daemon=True).start()
 
+    def _try_media(self, low, text):
+        """Voice/text media routing: 'play <song>', 'playv', 'stop'. Returns HTML or None."""
+        if low == "stop" or low.startswith("stop ") or low == "stop music":
+            self._media.stop()
+            return "<b>[media]</b> Playback stopped."
+        if low.startswith("play ") or low.startswith("playv ") or low.startswith("bajao "):
+            query = text.split(" ", 1)[1].strip() if " " in text else ""
+            if not query:
+                return "<b>[media]</b> What should I play? Try: play <i>song name</i>"
+            video = low.startswith("playv ")
+            self._media.play(query, video)
+            return "<b>[media]</b> Playing <i>%s</i>... (first time: downloading)" % query.replace("<", "&lt;")
+        return None
+
     def _answer(self, text):
         try:
             if text.lower() == "help":
                 self._done("Tools: <b>web_search &lt;q&gt;</b> · <b>weather &lt;city&gt;</b> · "
-                           "<b>open_app &lt;name&gt;</b> · <b>sysinfo</b> · <b>providers</b> · or just chat.")
+                           "<b>open_app &lt;name&gt;</b> · <b>sysinfo</b> · <b>providers</b> · "
+                           "<b>play &lt;song&gt;</b> · <b>stop</b> · or just chat.")
                 return
-            if text.lower().startswith("providers"):
+            low = text.lower()
+            media = self._try_media(low, text)
+            if media is not None:
+                self._done(media)
+                return
+            if low.startswith("providers"):
                 lines = []
                 for i, p in enumerate(self._providers):
                     key = p.get("api_key") or (load_gemini_key() if p["type"] == "gemini" else "")

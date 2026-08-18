@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=Karen Spidey
+Description=Karen OS - navy + spider-web red boot splash
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/karen-spidey
+ScriptFile=karen-spidey.script
