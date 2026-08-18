@@ -35,14 +35,14 @@ pacman -S --noconfirm --needed \
   xorg-server xorg-xinit xorg-xrandr xorg-xdpyinfo xf86-video-vesa \
   openbox tint2 xterm pcmanfm \
   pipewire pipewire-pulse wireplumber alsa-utils portaudio \
-  python python-pip python-pyqt6 python-pyaudio mpv yt-dlp plymouth hsetroot \
+  python python-pip python-pyqt6 python-pyaudio mpv yt-dlp plymouth hsetroot scrot firefox \
   networkmanager cpupower zram-generator git sudo openssh \
   >>"$LOG" 2>&1
 say "  [OK] packages"
 
 # --- 2) Karen payload -----------------------------------------------------
 say "downloading Karen shell + welcome wizard..."
-mkdir -p /opt/karen-linux/etc/tint2 /opt/karen-linux/etc/openbox /opt/karen-linux/assets /opt/karen-linux/media
+mkdir -p /opt/karen-linux/etc/tint2 /opt/karen-linux/etc/openbox /opt/karen-linux/assets /opt/karen-linux/media /opt/karen-linux/screenshots
 for f in karen_shell.py karen-welcome.py requirements-linux.txt; do
   curl -fsSL "$REPO/desktop/$f" -o "/opt/karen-linux/$f"
 done
@@ -118,6 +118,16 @@ EOF
 mkinitcpio -P >>"$LOG" 2>&1 || true
 
 sed -i 's/^GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"/' /etc/default/grub
+
+# Karen spidey GRUB theme (background + red highlights)
+mkdir -p /boot/grub/themes/karen
+cp -f /opt/karen-linux/assets/wallpaper.png /boot/grub/themes/karen/wallpaper.png
+if ! grep -q '^GRUB_BACKGROUND=' /etc/default/grub; then
+  printf 'GRUB_BACKGROUND="/boot/grub/themes/karen/wallpaper.png"\n' >> /etc/default/grub
+fi
+if ! grep -q '^GRUB_COLOR_NORMAL=' /etc/default/grub; then
+  printf 'GRUB_COLOR_NORMAL="white/black"\nGRUB_COLOR_HIGHLIGHT="light-red/dark-gray"\n' >> /etc/default/grub
+fi
 grub-mkconfig -o /boot/grub/grub.cfg >>"$LOG" 2>&1 || true
 
 cat > /etc/systemd/journald.conf <<'EOF'

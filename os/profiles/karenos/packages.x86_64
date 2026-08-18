@@ -48,6 +48,10 @@ yt-dlp
 # --- boot splash + looks ---
 plymouth
 hsetroot
+scrot
+
+# --- browser ---
+firefox
 
 # --- installer (portable USB full install) ---
 archinstall

@@ -18,7 +18,9 @@ Config: /etc/karen/config.json  (or ~/.karen/config.json, or env vars)
 }
 """
 import datetime as _dt
-import json, math, os, platform, struct, subprocess, sys, tempfile, threading, urllib.request, wave, zipfile
+import html as _html
+import json, math, os, platform, re, struct, subprocess, sys, tempfile, threading, time, urllib.request, wave, zipfile
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 from PyQt6.QtCore import QTimer
@@ -35,6 +37,8 @@ CONFIG_PATHS = [Path("/etc/karen/config.json"), Path.home() / ".karen" / "config
 VOSK_URL = "https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip"
 VOSK_DIR = Path("/opt/karen-linux/models/vosk-small")
 MEDIA_DIR = Path("/opt/karen-linux/media")
+NOTES_FILE = Path("/opt/karen-linux/notes.txt")
+SHOTS_DIR = Path("/opt/karen-linux/screenshots")
 
 DEFAULT_PROVIDERS = [
     {"id": "zen", "name": "OpenCode Zen", "type": "openai",
@@ -180,6 +184,8 @@ class SoundFx:
                 self._gen("error.wav", [(196.0, 0.35)], 0.45, wobble=True)
                 self._gen("mic_on.wav", [(523.25, 0.09), (659.25, 0.09)], 0.4)
                 self._gen("mic_off.wav", [(659.25, 0.09), (523.25, 0.09)], 0.4)
+                self._gen("alarm.wav", [(880.0, 0.15), (None, 0.12), (880.0, 0.15),
+                                        (None, 0.12), (880.0, 0.30)], 0.5)
 
     @staticmethod
     def _tone(freq, dur, vol, phase=0.0, wobble=False):
@@ -196,9 +202,12 @@ class SoundFx:
         samples = []
         phase = 0.0
         for freq, dur in notes:
-            chunk = self._tone(freq, dur, vol, phase, wobble)
-            samples += chunk
-            phase += 2 * math.pi * freq * dur
+            if freq is None:
+                samples += [0] * int(SoundFx.SR * dur)
+            else:
+                chunk = self._tone(freq, dur, vol, phase, wobble)
+                samples += chunk
+                phase += 2 * math.pi * freq * dur
         with wave.open(str(self._dir / name), "wb") as w:
             w.setnchannels(1)
             w.setsampwidth(2)
@@ -376,6 +385,11 @@ class KarenShell(QMainWindow):
         self._mic = VoiceInput()
         self._sfx = SoundFx()
         self._media = MediaPlayer()
+        self._reminders = []
+        self._confirm = None
+        rt = QTimer(self)
+        rt.timeout.connect(self._check_reminders)
+        rt.start(1000)
 
         self.setWindowTitle("Karen OS")
         self.setGeometry(60, 60, 960, 660)
@@ -533,17 +547,137 @@ class KarenShell(QMainWindow):
             return "<b>[media]</b> Playing <i>%s</i>... (first time: downloading)" % query.replace("<", "&lt;")
         return None
 
+    # ---- reminders --------------------------------------------------------
+    _UNIT = {"s": 1, "sec": 1, "secs": 1, "second": 1, "seconds": 1,
+             "m": 60, "min": 60, "mins": 60, "minute": 60, "minutes": 60,
+             "h": 3600, "hr": 3600, "hrs": 3600, "hour": 3600, "hours": 3600}
+
+    def _check_reminders(self):
+        now = time.time()
+        for fire, msg in list(self._reminders):
+            if now >= fire:
+                self._reminders.remove((fire, msg))
+                self._sfx.play("alarm")
+                self._push("assistant", f"<b>[reminder]</b> {msg}")
+                self.status.setText("Reminder fired")
+                self._speak(f"Reminder: {msg}")
+                if self._voice_mode:
+                    self._start_listening()
+
+    def _try_remind(self, low, text):
+        m = re.match(r"remind me in (\d+)\s*([a-z]+)?[ ,]*(?:to |that )?(.*)$", low)
+        if not m:
+            m = re.match(r"remind me (?:to |that )?(.+?) in (\d+)\s*([a-z]+)?$", low)
+            if m:
+                task, n, unit = m.group(1), m.group(2), m.group(3)
+            else:
+                if not re.match(r"alarm in (\d+)", low):
+                    return None
+                n, unit, task = re.match(r"alarm in (\d+)\s*([a-z]+)?", low).group(1), \
+                                re.match(r"alarm in (\d+)\s*([a-z]+)?", low).group(2), ""
+        else:
+            n, unit, task = m.group(1), m.group(2), m.group(3)
+        mult = self._UNIT.get((unit or "m").lower(), 60)
+        secs = max(1, int(n) * mult)
+        msg = (task or "alarm").strip() or "alarm"
+        self._reminders.append((time.time() + secs, msg))
+        return f"<b>[reminder]</b> Set for {n} {unit or 'minute(s)'}: <i>{msg}</i>"
+
+    # ---- notes (Karen memory) ---------------------------------------------
+    def _try_notes(self, low, text):
+        if low.startswith("remember "):
+            note = text.split(" ", 1)[1].strip()
+            NOTES_FILE.parent.mkdir(parents=True, exist_ok=True)
+            with open(NOTES_FILE, "a") as f:
+                f.write(f"{_dt.datetime.now():%Y-%m-%d %H:%M} - {note}\n")
+            return f"<b>[notes]</b> I'll remember that: <i>{note}</i>"
+        if low in ("my notes", "read my notes", "what did i remember", "show notes"):
+            return self._read_notes()
+        if low in ("clear my notes", "forget everything"):
+            if NOTES_FILE.exists():
+                NOTES_FILE.unlink()
+            return "<b>[notes]</b> Memory cleared."
+        return None
+
+    def _read_notes(self, n=6):
+        if not NOTES_FILE.exists():
+            return "<b>[notes]</b> Nothing saved yet. Say: remember <i>something</i>"
+        lines = NOTES_FILE.read_text().strip().splitlines()
+        body = "<br>".join("&bull; " + l.replace("<", "&lt;") for l in lines[-n:])
+        return f"<b>[notes]</b> Last {min(n, len(lines))} notes:<br>{body}"
+
+    # ---- system control -----------------------------------------------------
+    def _try_system(self, low, text):
+        if self._confirm is not None and low in ("yes", "confirm", "haan", "yup", "yeah"):
+            act = self._confirm
+            self._confirm = None
+            threading.Thread(target=lambda: subprocess.run(["systemctl", act, "-i"],
+                                                           capture_output=True), daemon=True).start()
+            return "Goodbye! " + ("Rebooting now." if act == "reboot" else "Shutting down.")
+        if low in ("shutdown", "poweroff", "power off") or low.startswith("shutdown "):
+            self._confirm = "poweroff"
+            return "Are you sure? Say <b>yes</b> to shut down."
+        if low in ("reboot", "restart") or low.startswith("reboot "):
+            self._confirm = "reboot"
+            return "Are you sure? Say <b>yes</b> to reboot."
+        if low.startswith("volume up"):
+            subprocess.run(["wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", "+10%"], capture_output=True)
+            return "<b>[system]</b> Volume up."
+        if low.startswith("volume down"):
+            subprocess.run(["wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", "-10%"], capture_output=True)
+            return "<b>[system]</b> Volume down."
+        if low in ("mute", "volume off"):
+            subprocess.run(["wpctl", "set-mute", "@DEFAULT_AUDIO_SINK@", "toggle"], capture_output=True)
+            return "<b>[system]</b> Muted."
+        if low in ("unmute", "volume on"):
+            subprocess.run(["wpctl", "set-mute", "@DEFAULT_AUDIO_SINK@", "toggle"], capture_output=True)
+            return "<b>[system]</b> Unmuted."
+        if low == "screenshot" or low.startswith("screenshot "):
+            SHOTS_DIR.mkdir(parents=True, exist_ok=True)
+            path = SHOTS_DIR / f"shot_{_dt.datetime.now():%Y%m%d_%H%M%S}.png"
+            ok = subprocess.run(["scrot", str(path)], capture_output=True).returncode
+            if ok == 0:
+                return f"<b>[system]</b> Screenshot saved: <i>{path.name}</i>"
+            return "<b>[system]</b> Screenshot failed (scrot missing?)."
+        return None
+
+    # ---- news ---------------------------------------------------------------
+    def _try_news(self, low):
+        if not (low in ("news", "news headlines", "headlines", "breaking news") or low.startswith("news ")):
+            return None
+        for url in ("https://feeds.bbci.co.uk/news/world/rss.xml",
+                    "https://feeds.bbci.co.uk/news/world/asia/rss.xml"):
+            try:
+                r = requests.get(url, timeout=15)
+                root = ET.fromstring(r.content)
+                items = root.findall(".//item")[:3]
+                titles = [re.sub(r"<[^>]+>", "", _html.unescape(it.findtext("title") or ""))
+                          for it in items if it.findtext("title")]
+                if titles:
+                    return "<b>[news]</b> " + "<br>".join(
+                        f"{i+1}. {t}" for i, t in enumerate(titles))
+            except Exception:
+                continue
+        return "<b>[news]</b> Could not fetch headlines."
+
     def _answer(self, text):
         try:
             if text.lower() == "help":
                 self._done("Tools: <b>web_search &lt;q&gt;</b> · <b>weather &lt;city&gt;</b> · "
                            "<b>open_app &lt;name&gt;</b> · <b>sysinfo</b> · <b>providers</b> · "
-                           "<b>play &lt;song&gt;</b> · <b>stop</b> · or just chat.")
+                           "<b>play &lt;song&gt;</b> · <b>stop</b> · <b>remind me in X minutes to ...</b> · "
+                           "<b>remember ...</b> · <b>news</b> · <b>volume up/down</b> · <b>screenshot</b> · "
+                           "<b>reboot/shutdown</b> · or just chat.")
                 return
             low = text.lower()
             media = self._try_media(low, text)
             if media is not None:
                 self._done(media)
+                return
+            out = self._try_remind(low, text) or self._try_notes(low, text) or \
+                  self._try_system(low, text) or self._try_news(low)
+            if out:
+                self._done(out)
                 return
             if low.startswith("providers"):
                 lines = []
