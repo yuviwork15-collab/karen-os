@@ -19,7 +19,7 @@ jobs:
           pacman-key --init
           pacman-key --populate archlinux
           pacman -Syu --noconfirm --needed
-          pacman -S --noconfirm --needed archiso
+          pacman -S --noconfirm --needed archiso syslinux intel-ucode amd-ucode
 
       - name: Ship Karen payload into profile
         run: |
