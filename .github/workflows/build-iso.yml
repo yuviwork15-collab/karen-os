@@ -21,17 +21,6 @@ jobs:
           pacman -Syu --noconfirm --needed
           pacman -S --noconfirm --needed archiso syslinux intel-ucode amd-ucode
 
-      - name: Pin live initramfs config (archiso hooks guaranteed)
-        run: |
-          cat > /etc/mkinitcpio-archiso.conf <<'EOF'
-          MODULES=(usb-storage uas xhci_hcd xhci_pci ehci_pci ohci_pci uhci_hcd)
-          BINARIES=()
-          FILES=()
-          HOOKS=(base udev microcode modconf kms memdisk archiso archiso_loop_mnt archiso_pxe_common archiso_pxe_nbd archiso_pxe_http archiso_pxe_nfs block filesystems keyboard)
-          COMPRESSION="zstd"
-          EOF
-          cp -f /etc/mkinitcpio-archiso.conf /etc/mkinitcpio.conf
-
       - name: Ship Karen payload into profile
         run: |
           mkdir -p os/profiles/karenos/airootfs/opt/karen-linux
